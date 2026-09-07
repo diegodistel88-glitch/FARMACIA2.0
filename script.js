@@ -1,10 +1,15 @@
 // ======================================================================
+// FARMACIA 2.0 - Sistema de Kits Médicos
+// ======================================================================
+
+// ======================================================================
 // 1. VARIABLES GLOBALES
 // ======================================================================
 
 let vademecum = [];
 let historialDescargos = [];
 let insumoSeleccionado = null;
+let ultimoDescargo = null;
 
 // ======================================================================
 // 2. CARGAR DATOS DESDE EL EXCEL
@@ -12,23 +17,22 @@ let insumoSeleccionado = null;
 
 async function cargarDatos() {
     try {
+        // Intentar cargar desde JSON primero
         const response = await fetch('data/vademecum.json');
-        if (!response.ok) {
-            throw new Error('No se pudo cargar el JSON');
-        }
+        if (!response.ok) throw new Error('No se pudo cargar el JSON');
         vademecum = await response.json();
-        document.getElementById('dbStatus').textContent = `✅ ${vademecum.length} registros cargados`;
+        document.getElementById('dbStatus').textContent = `✅ ${vademecum.length} registros`;
+        actualizarResultados();
         mostrarToast(`Base de datos cargada: ${vademecum.length} registros`, 'success');
         return;
     } catch (e) {
         console.log('Intentando cargar Excel directamente...');
-        // Si no hay JSON, intentar cargar el Excel
+        // Si no hay JSON, cargar el Excel
         cargarExcelDirecto();
     }
 }
 
 function cargarExcelDirecto() {
-    // Crear un input de archivo oculto
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.xlsx,.xls';
@@ -52,7 +56,8 @@ function cargarExcelDirecto() {
                     via: row.Via_Administracion || row.via || '',
                     descripcion: row.Descripcion_Limpia || row.descripcion || ''
                 }));
-                document.getElementById('dbStatus').textContent = `✅ ${vademecum.length} registros cargados (Excel)`;
+                document.getElementById('dbStatus').textContent = `✅ ${vademecum.length} registros (Excel)`;
+                actualizarResultados();
                 mostrarToast(`Excel cargado: ${vademecum.length} registros`, 'success');
             } catch (err) {
                 document.getElementById('dbStatus').textContent = '❌ Error al leer el Excel';
@@ -71,37 +76,48 @@ function cargarExcelDirecto() {
 function buscarInsumos() {
     const query = document.getElementById('searchInput').value.toLowerCase().trim();
     const container = document.getElementById('resultados');
+    const countEl = document.getElementById('resultCount');
     
     if (!query) {
-        container.innerHTML = `<p class="hint">Escribe para buscar...</p>`;
+        container.innerHTML = `<p class="hint">🔎 Escribe para buscar en el vademécum...</p>`;
+        countEl.textContent = '';
         return;
     }
     
     const resultados = vademecum.filter(item => {
-        const texto = `${item.nombre} ${item.descripcion} ${item.codigo} ${item.formato}`.toLowerCase();
+        const texto = `${item.nombre} ${item.descripcion} ${item.codigo} ${item.formato} ${item.categoria}`.toLowerCase();
         return texto.includes(query);
     });
     
+    countEl.textContent = `${resultados.length} resultados`;
+    
     if (resultados.length === 0) {
-        container.innerHTML = `<p class="hint">No se encontraron resultados para "${query}"</p>`;
+        container.innerHTML = `<p class="hint">❌ No se encontraron resultados para "${query}"</p>`;
         return;
     }
     
-    container.innerHTML = resultados.slice(0, 30).map(item => `
+    container.innerHTML = resultados.slice(0, 50).map(item => `
         <div class="resultado-item" onclick="seleccionarInsumo(${item.codigo})">
             <div>
                 <div class="nombre">${item.nombre}</div>
-                <div class="detalle">${item.formato} | ${item.concentracion || 'N/E'}</div>
+                <div class="detalle">${item.formato || 'N/E'} | ${item.concentracion ? item.concentracion + ' ' + (item.unidad || '') : 'N/E'}</div>
             </div>
             <span class="codigo">#${item.codigo}</span>
         </div>
     `).join('');
 }
 
+function actualizarResultados() {
+    const query = document.getElementById('searchInput').value;
+    if (query) buscarInsumos();
+}
+
 function limpiarBusqueda() {
     document.getElementById('searchInput').value = '';
-    document.getElementById('resultados').innerHTML = `<p class="hint">Escribe para buscar...</p>`;
+    document.getElementById('resultados').innerHTML = `<p class="hint">🔎 Escribe para buscar en el vademécum...</p>`;
+    document.getElementById('resultCount').textContent = '';
     document.getElementById('detailPanel').style.display = 'none';
+    insumoSeleccionado = null;
 }
 
 // ======================================================================
@@ -110,7 +126,10 @@ function limpiarBusqueda() {
 
 function seleccionarInsumo(codigo) {
     const item = vademecum.find(i => i.codigo == codigo);
-    if (!item) return;
+    if (!item) {
+        mostrarToast('Insumo no encontrado', 'error');
+        return;
+    }
     
     insumoSeleccionado = item;
     
@@ -125,6 +144,7 @@ function seleccionarInsumo(codigo) {
     document.getElementById('detailCategoria').textContent = item.categoria || 'N/E';
     document.getElementById('detailConcentracion').textContent = item.concentracion ? `${item.concentracion} ${item.unidad || ''}` : 'N/E';
     document.getElementById('detailVia').textContent = item.via || 'No especificada';
+    document.getElementById('detailFormatoBadge').textContent = item.formato || 'N/E';
     
     // Generar kit asociado
     generarKit(item);
@@ -142,21 +162,29 @@ function generarKit(item) {
     const kit = obtenerKitAsociado(item);
     
     if (!kit || kit.length === 0) {
-        container.innerHTML = `<p class="hint">Este insumo no requiere descartables asociados</p>`;
+        container.innerHTML = `<p class="hint">✅ Este insumo no requiere descartables asociados</p>`;
         return;
     }
     
-    container.innerHTML = kit.map(k => `
+    // Calcular total de items
+    const totalItems = kit.reduce((sum, k) => sum + (k.cantidad || 1), 0);
+    
+    let html = `<div style="margin-bottom:8px; font-size:0.85em; color:#4a5568;">Total de insumos: <strong>${totalItems}</strong></div>`;
+    
+    html += kit.map(k => `
         <div class="kit-item">
-            <span>${k.nombre}</span>
-            <span>
-                <span class="kit-cantidad">x${k.cantidad}</span>
-                <span class="kit-stock ${k.stock > 0 ? 'stock-disponible' : 'stock-agotado'}">
-                    ${k.stock > 0 ? `✅ ${k.stock} uds` : '❌ Sin stock'}
-                </span>
+            <div class="kit-nombre">
+                <span>${k.nombre}</span>
+                <span class="kit-cantidad">x${k.cantidad || 1}</span>
+            </div>
+            <span class="kit-stock ${k.stock > 0 ? 'stock-disponible' : 'stock-agotado'}">
+                ${k.stock > 0 ? `✅ ${k.stock} uds` : '❌ Sin stock'}
             </span>
         </div>
     `).join('');
+    
+    container.innerHTML = html;
+    window.kitActual = kit;
 }
 
 // ======================================================================
@@ -165,228 +193,40 @@ function generarKit(item) {
 
 function obtenerKitAsociado(item) {
     const kit = [];
-    const nombre = item.nombre.toUpperCase();
+    const nombre = (item.nombre || '').toUpperCase();
     const formato = item.formato || '';
     const via = item.via || '';
     
     // ===== 1. MEDICAMENTOS INYECTABLES =====
-    if (formato.includes('INYECTABLE') || formato.includes('AMPOLLA') || formato.includes('F.A.')) {
+    if (formato.includes('INYECTABLE') || formato.includes('AMPOLLA') || formato.includes('F.A.') || 
+        formato.includes('INYECTABLE_FA') || formato.includes('AMP/F.A.')) {
+        
         // Jeringa
-        kit.push(buscarInsumoPorTipo('JERINGA', '10 ML', ['10 ML', '5 ML', '20 ML']));
+        const jeringa = buscarInsumoPorTipo('JERINGA', '10 ML', ['10 ML', '5 ML', '20 ML', '3 ML']);
+        if (jeringa) kit.push(jeringa);
         
         // Agujas (según vía)
-        if (via.includes('INTRAVENOSO') || via.includes('IV')) {
-            kit.push(buscarInsumoPorTipo('AGUJA', '25/8', ['25/8', '25/7', '40/8']));
-            kit.push(buscarInsumoPorTipo('AGUJA', '25/8', ['25/8', '25/7', '40/8']));
+        if (via.includes('INTRAVENOSO') || via.includes('IV') || via.includes('INTRAVENOSA')) {
+            const aguja1 = buscarInsumoPorTipo('AGUJA', '25/8', ['25/8', '25/7', '40/8', '50/8']);
+            if (aguja1) kit.push({ ...aguja1, cantidad: 2 });
         } else if (via.includes('INTRAMUSCULAR') || via.includes('IM')) {
-            kit.push(buscarInsumoPorTipo('AGUJA', '40/8', ['40/8', '50/8', '25/7']));
+            const aguja = buscarInsumoPorTipo('AGUJA', '40/8', ['40/8', '50/8', '25/7']);
+            if (aguja) kit.push(aguja);
         } else if (via.includes('SUBCUTANEO') || via.includes('SC')) {
-            kit.push(buscarInsumoPorTipo('AGUJA', '16/5', ['16/5', '25/8', '25/7']));
+            const aguja = buscarInsumoPorTipo('AGUJA', '16/5', ['16/5', '25/8', '25/7']);
+            if (aguja) kit.push(aguja);
         }
         
         // Agua destilada (si no es agua)
         if (!nombre.includes('AGUA DESTILADA')) {
-            kit.push(buscarInsumoPorTipo('AGUA', '10 ML', ['10 ML', '5 ML']));
-        }
-        
-        // Diluyente (si es IV)
-        if (via.includes('INTRAVENOSO') || via.includes('IV')) {
-            kit.push(buscarInsumoPorTipo('DILUYENTE', 'SF', ['SF', 'DEXTROSA']));
+            const agua = buscarInsumoPorTipo('AGUA', '10 ML', ['10 ML', '5 ML']);
+            if (agua) kit.push(agua);
         }
     }
     
     // ===== 2. SONDAS VESICALES =====
-    if (nombre.includes('SONDA FOLLEY') || nombre.includes('SONDA FOLEY')) {
-        kit.push(buscarInsumoPorTipo('BOLSA', '', []));
-        kit.push(buscarInsumoPorTipo('JERINGA', '10 ML', ['10 ML', '5 ML']));
-        kit.push(buscarInsumoPorTipo('AGUA', '10 ML', ['10 ML', '5 ML']));
-        kit.push(buscarInsumoPorTipo('LUBRICANTE', '', []));
-        kit.push(buscarInsumoPorTipo('GUANTE', '', []));
-        kit.push(buscarInsumoPorTipo('GASA', '', []));
-        kit.push(buscarInsumoPorTipo('BARBIJO', '', []));
-    }
-    
-    // ===== 3. SONDAS NASOGÁSTRICAS =====
-    if (nombre.includes('SONDA TIPO K') || nombre.includes('NASOGASTRICA')) {
-        kit.push(buscarInsumoPorTipo('JERINGA', '60 ML', ['60 ML', '50 ML']));
-        kit.push(buscarInsumoPorTipo('JERINGA', '20 ML', ['20 ML', '10 ML']));
-        kit.push(buscarInsumoPorTipo('GUANTE', '', []));
-        kit.push(buscarInsumoPorTipo('GASA', '', []));
-        kit.push(buscarInsumoPorTipo('BARBIJO', '', []));
-        kit.push(buscarInsumoPorTipo('LUBRICANTE', '', []));
-    }
-    
-    // ===== 4. CATÉTERES VENOSOS CENTRALES =====
-    if (nombre.includes('CATETER VENOSO CENTRAL') || nombre.includes('SET P/CATETERISMO VENA CAVA')) {
-        kit.push(buscarInsumoPorTipo('GUANTE', '', [], 4));
-        kit.push(buscarInsumoPorTipo('BARBIJO', '', [], 2));
-        kit.push(buscarInsumoPorTipo('GASA', '', [], 10));
-        kit.push(buscarInsumoPorTipo('JERINGA', '10 ML', ['10 ML', '5 ML'], 3));
-        kit.push(buscarInsumoPorTipo('AGUJA', '25/8', ['25/8', '25/7'], 2));
-        kit.push(buscarInsumoPorTipo('LLAVE', '', [], 2));
-        kit.push(buscarInsumoPorTipo('ANTISEPTICO', '', []));
-        kit.push(buscarInsumoPorTipo('APOSITO', '', []));
-    }
-    
-    // ===== 5. APÓSITOS Y CURACIONES =====
-    if (nombre.includes('APOSITO') || nombre.includes('VENDA') || nombre.includes('GASA')) {
-        kit.push(buscarInsumoPorTipo('GUANTE', '', []));
-        kit.push(buscarInsumoPorTipo('ANTISEPTICO', '', []));
-        kit.push(buscarInsumoPorTipo('GASA', '', [], 3));
-        kit.push(buscarInsumoPorTipo('CINTA', '', []));
-    }
-    
-    // Filtrar items nulos y duplicados
-    return kit.filter(k => k !== null && k.nombre !== null && !kit.some(existente => existente.nombre === k.nombre && existente.cantidad === k.cantidad));
-}
-
-// ======================================================================
-// 7. BUSCAR INSUMOS POR TIPO (con análogos)
-// ======================================================================
-
-function buscarInsumoPorTipo(tipo, medida, alternativas, cantidad = 1) {
-    // Buscar en el vademécum
-    let candidates = vademecum.filter(item => {
-        const itemStr = `${item.nombre} ${item.formato}`.toUpperCase();
-        return itemStr.includes(tipo.toUpperCase());
-    });
-    
-    // Si hay medida, buscar exacto
-    if (medida) {
-        let exactos = candidates.filter(item => 
-            item.concentracion && item.concentracion.includes(medida)
-        );
-        if (exactos.length > 0) {
-            return { ...exactos[0], cantidad };
-        }
-    }
-    
-    // Buscar análogos por alternativas
-    for (let alt of alternativas) {
-        if (!alt) continue;
-        let analogos = candidates.filter(item => 
-            item.concentracion && item.concentracion.includes(alt)
-        );
-        if (analogos.length > 0) {
-            return { ...analogos[0], cantidad };
-        }
-    }
-    
-    // Si no hay, tomar el primero disponible del tipo
-    if (candidates.length > 0) {
-        return { ...candidates[0], cantidad };
-    }
-    
-    // Crear un item genérico si no se encuentra
-    return {
-        codigo: '---',
-        nombre: `${tipo} (No encontrado)`,
-        formato: 'N/A',
-        cantidad: cantidad,
-        stock: 0
-    };
-}
-
-// ======================================================================
-// 8. DESCARGAR KIT Y REGISTRAR
-// ======================================================================
-
-function descargarKit() {
-    if (!insumoSeleccionado) {
-        mostrarToast('Selecciona un insumo primero', 'error');
-        return;
-    }
-    
-    const kit = obtenerKitAsociado(insumoSeleccionado);
-    if (!kit || kit.length === 0) {
-        mostrarToast('Este insumo no requiere descartables', 'info');
-        return;
-    }
-    
-    // Registrar descargo
-    const descargo = {
-        fecha: new Date().toLocaleString(),
-        insumo: insumoSeleccionado.nombre,
-        codigo: insumoSeleccionado.codigo,
-        kit: kit.map(k => ({ nombre: k.nombre, cantidad: k.cantidad })),
-        totalItems: kit.reduce((sum, k) => sum + k.cantidad, 0)
-    };
-    
-    historialDescargos.push(descargo);
-    actualizarHistorial();
-    
-    // Mostrar mensaje
-    mostrarToast(`✅ Kit descargado: ${descargo.totalItems} insumos`, 'success');
-    
-    // Descargar como JSON
-    descargarJSON(descargo);
-}
-
-function descargarJSON(descargo) {
-    const dataStr = JSON.stringify(descargo, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `descargo_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function imprimirKit() {
-    window.print();
-}
-
-// ======================================================================
-// 9. ACTUALIZAR HISTORIAL
-// ======================================================================
-
-function actualizarHistorial() {
-    const container = document.getElementById('historialContainer');
-    if (historialDescargos.length === 0) {
-        container.innerHTML = `<p class="hint">No hay descargos registrados</p>`;
-        return;
-    }
-    
-    container.innerHTML = historialDescargos.slice().reverse().map(h => `
-        <div class="historial-item">
-            <span><strong>${h.insumo}</strong> (${h.totalItems} insumos)</span>
-            <span class="fecha">${h.fecha}</span>
-        </div>
-    `).join('');
-}
-
-// ======================================================================
-// 10. TOAST Y UTILIDADES
-// ======================================================================
-
-function mostrarToast(mensaje, tipo = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${tipo}`;
-    toast.textContent = mensaje;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
-}
-
-// ======================================================================
-// 11. INICIALIZACIÓN
-// ======================================================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Fecha actual
-    document.getElementById('fechaActual').textContent = new Date().toLocaleDateString('es-AR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-    
-    // Cargar datos
-    cargarDatos();
-    
-    // Tecla Enter para buscar
-    document.getElementById('searchInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') buscarInsumos();
-    });
-});
-
-console.log('🏥 Sistema de Kits Médicos cargado');
+    if (nombre.includes('SONDA FOLLEY') || nombre.includes('SONDA FOLEY') || 
+        (nombre.includes('SONDA') && via.includes('URINARIO'))) {
+        
+        const items = [
+            { tipo: 'BOLSA', medida: '', altern
