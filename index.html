@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Kits Médicos - Vademécum</title>
+    <!-- Librerías para leer Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Estilos -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <h1>🏥 Sistema de Kits Médicos</h1>
+            <p class="subtitle">Base de datos: <span id="dbStatus">Cargando...</span></p>
+        </header>
+
+        <main class="app-main">
+            <!-- PANEL DE BÚSQUEDA -->
+            <section class="panel search-panel">
+                <h2>🔍 Buscar Insumo o Medicamento</h2>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Ej: jeringa, amikacina, sonda..." oninput="buscarInsumos()">
+                    <button onclick="limpiarBusqueda()" class="btn-clear">✕</button>
+                </div>
+                <div id="resultados" class="resultados-list">
+                    <p class="hint">Escribe para buscar...</p>
+                </div>
+            </section>
+
+            <!-- PANEL DE DETALLE DEL INSUMO -->
+            <section class="panel detail-panel" id="detailPanel" style="display:none;">
+                <div class="detail-header">
+                    <h2 id="detailNombre">-</h2>
+                    <span class="codigo-badge" id="detailCodigo">Código: -</span>
+                </div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Formato</label>
+                        <span id="detailFormato">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Categoría</label>
+                        <span id="detailCategoria">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Concentración</label>
+                        <span id="detailConcentracion">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Vía</label>
+                        <span id="detailVia">-</span>
+                    </div>
+                </div>
+
+                <!-- KIT DE DESCARTABLES ASOCIADOS -->
+                <div class="kit-section">
+                    <h3>🧩 Kit de Descartables Asociados</h3>
+                    <div id="kitContainer">
+                        <p class="hint">Selecciona un insumo para ver su kit asociado</p>
+                    </div>
+                    <div class="kit-actions">
+                        <button onclick="descargarKit()" class="btn-primary">📦 Descargar Kit</button>
+                        <button onclick="imprimirKit()" class="btn-secondary">🖨️ Imprimir</button>
+                    </div>
+                </div>
+
+                <!-- HISTORIAL DE DESCARGOS -->
+                <div class="historial-section">
+                    <h3>📋 Historial de Descargos</h3>
+                    <div id="historialContainer">
+                        <p class="hint">No hay descargos registrados</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <p>Datos actualizados desde el vademécum médico | <span id="fechaActual"></span></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
