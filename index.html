@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Kits Médicos - Vademécum</title>
+    <title>🏥 Farmacia 2.0 - Kits Médicos</title>
     <!-- Librerías para leer Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Estilos -->
@@ -13,8 +13,14 @@
     <div class="app-container">
         <!-- HEADER -->
         <header class="app-header">
-            <h1>🏥 Sistema de Kits Médicos</h1>
-            <p class="subtitle">Base de datos: <span id="dbStatus">Cargando...</span></p>
+            <div class="header-left">
+                <h1>🏥 Farmacia 2.0</h1>
+                <span class="version-badge">v2.0</span>
+            </div>
+            <div class="header-right">
+                <p class="subtitle">Sistema de Kits Médicos</p>
+                <p class="db-status">Base de datos: <span id="dbStatus">Cargando...</span></p>
+            </div>
         </header>
 
         <main class="app-main">
@@ -23,34 +29,40 @@
                 <h2>🔍 Buscar Insumo o Medicamento</h2>
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="Ej: jeringa, amikacina, sonda..." oninput="buscarInsumos()">
-                    <button onclick="limpiarBusqueda()" class="btn-clear">✕</button>
+                    <button onclick="limpiarBusqueda()" class="btn-clear" title="Limpiar búsqueda">✕</button>
                 </div>
                 <div id="resultados" class="resultados-list">
-                    <p class="hint">Escribe para buscar...</p>
+                    <p class="hint">🔎 Escribe para buscar en el vademécum...</p>
+                </div>
+                <div class="search-info">
+                    <span id="resultCount"></span>
                 </div>
             </section>
 
             <!-- PANEL DE DETALLE DEL INSUMO -->
             <section class="panel detail-panel" id="detailPanel" style="display:none;">
                 <div class="detail-header">
-                    <h2 id="detailNombre">-</h2>
-                    <span class="codigo-badge" id="detailCodigo">Código: -</span>
+                    <div>
+                        <h2 id="detailNombre">-</h2>
+                        <span class="codigo-badge" id="detailCodigo">Código: -</span>
+                    </div>
+                    <span class="formato-badge" id="detailFormatoBadge">-</span>
                 </div>
                 <div class="detail-grid">
                     <div class="detail-item">
-                        <label>Formato</label>
+                        <label>📦 Formato</label>
                         <span id="detailFormato">-</span>
                     </div>
                     <div class="detail-item">
-                        <label>Categoría</label>
+                        <label>📂 Categoría</label>
                         <span id="detailCategoria">-</span>
                     </div>
                     <div class="detail-item">
-                        <label>Concentración</label>
+                        <label>⚗️ Concentración</label>
                         <span id="detailConcentracion">-</span>
                     </div>
                     <div class="detail-item">
-                        <label>Vía</label>
+                        <label>🚀 Vía</label>
                         <span id="detailVia">-</span>
                     </div>
                 </div>
@@ -64,6 +76,7 @@
                     <div class="kit-actions">
                         <button onclick="descargarKit()" class="btn-primary">📦 Descargar Kit</button>
                         <button onclick="imprimirKit()" class="btn-secondary">🖨️ Imprimir</button>
+                        <button onclick="enviarAFarmacia()" class="btn-success">📤 Enviar a Farmacia</button>
                     </div>
                 </div>
 
@@ -73,13 +86,21 @@
                     <div id="historialContainer">
                         <p class="hint">No hay descargos registrados</p>
                     </div>
+                    <button onclick="exportarHistorial()" class="btn-secondary btn-sm" style="margin-top:10px;">
+                        📤 Exportar Historial
+                    </button>
                 </div>
             </section>
         </main>
 
         <!-- FOOTER -->
         <footer class="app-footer">
-            <p>Datos actualizados desde el vademécum médico | <span id="fechaActual"></span></p>
+            <div class="footer-left">
+                <p>🏥 Farmacia 2.0 - Sistema de Kits Médicos</p>
+            </div>
+            <div class="footer-right">
+                <p>Datos actualizados desde el vademécum | <span id="fechaActual"></span></p>
+            </div>
         </footer>
     </div>
 
