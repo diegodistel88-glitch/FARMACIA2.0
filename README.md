@@ -1,43 +1,44 @@
-# 🏥 Sistema de Pedidos de Farmacia - Vademécum
+# 🏥 Farmacia 2.0 - Sistema de Kits
 
-Sistema web para gestión de pedidos de farmacia hospitalaria, con clasificación automática de medicamentos e insumos, control de stock y gestión de kits.
+Sistema inteligente de gestión de insumos médicos que asocia automáticamente los descartables necesarios según el medicamento o procedimiento seleccionado.
 
-## ✨ Características
+## 🚀 Características
 
-- 📋 **Vademécum completo** organizado y clasificado
-- 💊 **Medicamentos** con vía de administración
-- 🛠️ **Insumos** médicos y descartables
-- 📦 **Kits predefinidos** para procedimientos comunes
-- 🛒 **Carrito de pedidos** intuitivo
-- 👨‍⚕️ **Roles diferenciados** (Médico, Enfermería, Farmacia)
-- 📊 **Control de stock** en tiempo real
-- 🔍 **Búsqueda avanzada** por nombre o código
-- 🔄 **Análogos directos** cuando no hay stock
+- **Base de datos completa** con todos los insumos del vademécum
+- **Búsqueda inteligente** de medicamentos e insumos
+- **Generación automática** de kits de descartables asociados
+- **Lógica de análogos** para cuando no hay stock exacto
+- **Historial de descargos** con registro de cada solicitud
+- **Exportación a JSON** para integración con sistemas de farmacia
+- **Impresión de kits** para uso en enfermería
 
-## 🚀 Instalación Rápida
+## 📋 ¿Cómo funciona?
 
-### Requisitos
-- Python 3.8+
-- pip (gestor de paquetes)
+1. **El médico** busca el medicamento o insumo en la base de datos
+2. **El sistema** identifica automáticamente qué descartables necesita
+3. **Se genera un kit** con todos los insumos asociados
+4. **Se puede descargar** el kit en formato JSON para farmacia
+5. **Queda registrado** en el historial para trazabilidad
 
-### Pasos
+## 🧩 Kits disponibles
+
+| Tipo de insumo | Descartables asociados |
+|----------------|------------------------|
+| **F.A./Ampolla** | Jeringa, agujas (según vía IV/IM/SC), agua destilada |
+| **Sonda Vesical** | Bolsa colectora, jeringa 10ml, agua destilada, lubricante, guantes, barbijo, gasas |
+| **Sonda Nasogástrica** | Jeringas de alimentación, guantes, gasas, barbijo, lubricante |
+| **Catéter Central** | Guantes, barbijo, gasas, jeringas, agujas, llave de 3 vías, antiséptico, apósito |
+| **Apósitos/Vendas** | Guantes, antiséptico, gasas, cinta adhesiva |
+
+## 🛠️ Tecnologías utilizadas
+
+- HTML5 + CSS3
+- JavaScript Vanilla
+- SheetJS (XLSX) para lectura de Excel
+- GitHub Pages para hosting
+
+## 📦 Instalación
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/tu-usuario/vademecum-pedidos.git
-cd vademecum-pedidos
-
-# 2. Crear entorno virtual (recomendado)
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# o
-venv\Scripts\activate     # Windows
-
-# 3. Instalar dependencias
-pip install -r requirements.txt
-
-# 4. Colocar el archivo vademecum.xlsx en la carpeta data/
-# (El sistema lo procesará automáticamente)
-
-# 5. Ejecutar la aplicación
-python app.py
+git clone https://github.com/tu-usuario/farmacia-2.0.git
+cd farmacia-2.0
